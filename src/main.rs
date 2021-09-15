@@ -103,13 +103,17 @@
 //!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
 //! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
+#![feature(format_args_nl)]
 #![feature(global_asm)]
+#![feature(panic_info_message)]
 #![no_main]
 #![no_std]
 
 mod bsp;
+mod console;
 mod cpu;
 mod panic_wait;
+mod print;
 
 /// Early init code
 ///
@@ -117,5 +121,6 @@ mod panic_wait;
 ///
 /// - Only a sigle core must be active and running this function.
 unsafe fn kernel_init() -> ! {
-    panic!()
+    println!("[0] Hello GravitonOS User");
+    panic!("Stopped dead right here")
 }

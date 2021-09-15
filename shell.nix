@@ -39,7 +39,7 @@ in
 mkShell {
   name = "copernica";
   src = null;
-  buildInputs = [ rustup gdb pkgconfig pre-commit ripgrep mc docker docker-machine qemu_full gitui];
+  buildInputs = [ rustup gdb pkgconfig pre-commit ripgrep mc docker docker-machine qemu_full gitui ruby ];
   shellHook = ''
     export PATH=~/.cargo/bin:$PATH
   '';
