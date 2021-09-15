@@ -106,6 +106,7 @@
 #![feature(format_args_nl)]
 #![feature(global_asm)]
 #![feature(panic_info_message)]
+#![feature(trait_alias)]
 #![no_main]
 #![no_std]
 
@@ -114,6 +115,7 @@ mod console;
 mod cpu;
 mod panic_wait;
 mod print;
+mod synchronization;
 
 /// Early init code
 ///
@@ -121,6 +123,12 @@ mod print;
 ///
 /// - Only a sigle core must be active and running this function.
 unsafe fn kernel_init() -> ! {
-    println!("[0] Hello GravitonOS User");
-    panic!("Stopped dead right here")
+    use console::interface::Statistics;
+    println!("[0] Hello GravitonOS User from Rust land");
+    println!(
+        "[1] Chars written: {}",
+        bsp::console::console().chars_written()
+    );
+    println!("[2] Stopped dead right here");
+    cpu::wait_forever()
 }
