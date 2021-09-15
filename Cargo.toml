@@ -1,0 +1,21 @@
+[package]
+name = "graviton-os"
+version = "0.1.0"
+edition = "2018"
+
+[profile.release]
+lto = true
+
+[features]
+default = []
+bsp_rpi3 = []
+bsp_rpi4 = []
+
+[[bin]]
+name = "kernel"
+path = "src/main.rs"
+
+[dependencies]
+# Platform specific deps
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+cortex-a = { version = "6.x.x" }
