@@ -4,103 +4,29 @@
 //
 // Sublicensed from selected MIT to MPLv2
 
-use crate::{console,synchronization, synchronization::NullLock};
+use crate::{console, bsp::device_driver};
+use super::memory;
 use core::fmt;
 
 //------------------------------------------------------------------------------
-// Private Definitions
+// Public Code
 //------------------------------------------------------------------------------
 
-/// A device for generating QEMU output.
-/// The mutex protected part
-struct QEMUOutputInner {
-    chars_written: usize,
+// In case of a panic, the panic handler uses this function to take a last stab at printing before the system is halted.
+//
+// We try to init panic-versions of the GPIO and the UART. The panic versions are not protected with synchronization primitives, which increases chances that we get to print something, even when the kernel's default GPIO or UART instances happen to be locked at the time of the panic.
+//
+// # Safety
+//
+// - Use only for printing during a panic.
+pub unsafe fn panic_console_out() -> impl fmt::Write {
+    let mut panic_gpio = device_driver::PanicGPIO::new(memory::map::mmio::GPIO_START);
+    let mut panic_uart = device_driver::PanicUart::new(memory::map::mmio::PL011_UART_START);
+    panic_gpio.map_pl011_uart();
+    panic_uart.init();
+    panic_uart
 }
-
-
-//------------------------------------------------------------------------------
-// Public Definitions
-//------------------------------------------------------------------------------
-
-/// The main struct
-pub struct QEMUOutput {
-    inner: NullLock<QEMUOutputInner>,
-}
-
-//------------------------------------------------------------------------------
-// Global Instances
-//------------------------------------------------------------------------------
-
-static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
-
-//------------------------------------------------------------------------------
-// Private Code
-//------------------------------------------------------------------------------
-
-impl QEMUOutputInner {
-    const fn new() -> QEMUOutputInner {
-        QEMUOutputInner { chars_written: 0 }
-    }
-    /// Send a character.
-    fn write_char(&mut self, c: char) {
-        unsafe {
-            core::ptr::write_volatile(0x3F20_1000 as *mut u8, c as u8);
-        }
-        self.chars_written += 1;
-    }
-}
-
-/// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which
-/// in turn arn used to implement the `kernel`'s `print!` and `println!` maccros.
-/// By implmenting `write_str()`, we get `write_fmt()` automatically.
-///
-/// The function takes an `&mut self`, so it must be implemented for the inner struct.
-///
-/// See [`src/print.rs`].
-///
-/// [`src/print.rs`]: ../../print/index.html
-impl fmt::Write for QEMUOutputInner {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        for c in s.chars() {
-            // Convert newline to carriage return + newline
-            if c == '\n' {
-                self.write_char('\r')
-            }
-            self.write_char(c);
-        }
-        Ok(())
-    }
-}
-
-impl QEMUOutput {
-    /// Create a new instance
-    pub const fn new() -> QEMUOutput {
-        QEMUOutput {
-            inner: NullLock::new(QEMUOutputInner::new()),
-        }
-    }
-}
-
-/// Return a reference to the console.
 pub fn console() -> &'static impl console::interface::All {
-    &QEMU_OUTPUT
+    &super::PL011_UART
 }
 
-//------------------------------------------------------------------------------
-// OS Interface Code
-//------------------------------------------------------------------------------
-use synchronization::interface::Mutex;
-
-/// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex
-/// to serialize access.
-impl console::interface::Write for QEMUOutput {
-    fn write_fmt(&self, args: core::fmt::Arguments) -> fmt::Result {
-        // Fully qualified syntax for the call to `core::fmt::Write::write::fmt()` to increase readabliity
-        self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
-    }
-}
-impl console::interface::Statistics for QEMUOutput {
-    fn chars_written(&self) -> usize {
-        self.inner.lock(|inner| inner.chars_written)
-    }
-}

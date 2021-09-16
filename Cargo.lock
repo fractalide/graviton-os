@@ -16,6 +16,7 @@ name = "graviton-os"
 version = "0.1.0"
 dependencies = [
  "cortex-a",
+ "tock-registers",
 ]
 
 [[package]]

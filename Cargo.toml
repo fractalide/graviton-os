@@ -8,8 +8,8 @@ lto = true
 
 [features]
 default = []
-bsp_rpi3 = []
-bsp_rpi4 = []
+bsp_rpi3 = ["tock-registers"]
+bsp_rpi4 = ["tock-registers"]
 
 [[bin]]
 name = "kernel"
@@ -19,3 +19,6 @@ path = "src/main.rs"
 # Platform specific deps
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = { version = "6.x.x" }
+
+# Optional dependencies
+tock-registers = { version = "0.7.x", default-features = false, features = ["register_types"], optional = true }
